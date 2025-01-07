@@ -1,0 +1,8 @@
+.vscode/
+.idea/
+.DS_Store
+.venv/
+__pycache__/
+
+deps/
+local_sync.sh

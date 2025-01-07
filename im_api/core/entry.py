@@ -10,7 +10,7 @@ from im_api.core.processor import EventProcessor
 from im_api.core.bridge import MessageBridge
 from im_api.core.context import Context
 from im_api.drivers.qq import QQDriver
-
+from im_api.drivers.base import Platform
 
 class ImAPI:
     """ImAPI 插件主类"""
@@ -28,7 +28,7 @@ class ImAPI:
         self.event_processor = EventProcessor(self.server, self.driver_manager, self.message_bridge)
         
         # 注册驱动
-        self.driver_manager.register_driver("qq", QQDriver)
+        self.driver_manager.register_driver(Platform.QQ, QQDriver)
 
     def _load_config(self) -> Dict[str, Any]:
         """加载配置文件"""
@@ -57,6 +57,7 @@ class ImAPI:
 
         # 加载驱动
         for platform, driver_config in self.config["drivers"].items():
+            platform = Platform.from_string(platform)
             if not driver_config.get("enabled", False):
                 continue
 
@@ -73,9 +74,6 @@ class ImAPI:
             lambda platform, msg: self.event_processor.on_message(platform, msg),
             lambda platform, evt: self.event_processor.on_event(platform, evt)
         )
-
-        # 注册事件监听器
-        # self.server.register_event_listener("im_api.send_message", self.event_processor.on_send_message)
 
         # 注册命令
         self.server.register_help_message("!!im", "ImAPI commands")
@@ -124,7 +122,7 @@ class ImAPI:
         status = ["ImAPI Status:"]
         for driver in drivers:
             status.append(
-                f"- {driver.platform}: {'Connected' if driver.connected else 'Disconnected'}")
+                f"- {driver.get_platform()}: {'Connected' if driver.connected else 'Disconnected'}")
         source.reply("\n".join(status))
 
 

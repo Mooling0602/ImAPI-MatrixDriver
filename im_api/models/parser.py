@@ -1,23 +1,33 @@
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Optional
+
+from im_api.models.platform import Platform
 
 @dataclass
 class Event:
     """Base class for Satori events."""
     type: str
-    platform: str
+    platform: Platform
     self_id: str
     timestamp: int
     data: dict[str, Any]
+    channel: Optional[dict] = None
+    guild: Optional[dict] = None
+    member: Optional[dict] = None
+    user: Optional[dict] = None
 
     def to_dict(self) -> dict:
         """Convert event to Satori protocol format."""
         return {
             "type": self.type,
-            "platform": self.platform,
+            "platform": self.platform.value,
             "self_id": self.self_id,
             "timestamp": self.timestamp,
             "data": self.data,
+            "channel": self.channel,
+            "guild": self.guild,
+            "member": self.member,
+            "user": self.user,
         }
 
     @classmethod
@@ -25,10 +35,14 @@ class Event:
         """Create event from Satori protocol format."""
         return cls(
             type=data["type"],
-            platform=data["platform"],
+            platform=Platform(data["platform"]),
             self_id=data["self_id"],
             timestamp=data["timestamp"],
             data=data.get("data", {}),
+            channel=data.get("channel"),
+            guild=data.get("guild"),
+            member=data.get("member"),
+            user=data.get("user"),
         )
 
 @dataclass

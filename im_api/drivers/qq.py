@@ -9,13 +9,16 @@ from aiohttp import web
 from aiocqhttp import CQHttp, Event as CQEvent
 from mcdreforged.api.all import *
 
-from im_api.drivers.base import BaseDriver
+from im_api.drivers.base import BaseDriver, Platform
 from im_api.models.parser import Event, Message
+from im_api.models.request import SendMessageRequest, MessageType
 
 class QQDriver(BaseDriver):
     """QQ 驱动实现，使用 aiocqhttp 对接 OneBot 反向 WebSocket 接口"""
     
-    platform = "qq"
+    @classmethod
+    def get_platform(cls) -> Platform:
+        return Platform.QQ
     
     def __init__(self, config: dict[str, Any]):
         super().__init__(config)
@@ -60,7 +63,7 @@ class QQDriver(BaseDriver):
             self.logger.debug(f"Received message: {message.content} from {message.user['id']} in {message.channel['id']}")
             # 触发消息事件
             if self.message_callback:
-                self.message_callback(self.platform, message)
+                self.message_callback(Platform.QQ, message)
                 self.logger.debug("Message forwarded to MCDR")
             else:
                 self.logger.warning("No message callback registered")
@@ -73,7 +76,7 @@ class QQDriver(BaseDriver):
                 evt = Event(
                     id=str(event.time),
                     type="guild.member.join",
-                    platform=self.platform,
+                    platform=Platform.QQ,
                     channel={
                         "id": str(event.group_id),
                         "type": "group"
@@ -86,7 +89,7 @@ class QQDriver(BaseDriver):
                 evt = Event(
                     id=str(event.time),
                     type="guild.member.leave",
-                    platform=self.platform,
+                    platform=Platform.QQ,
                     channel={
                         "id": str(event.group_id),
                         "type": "group"
@@ -102,7 +105,7 @@ class QQDriver(BaseDriver):
             # 触发事件
             if self.event_callback:
                 self.logger.debug(f"Forwarding event to MCDR: {evt}")
-                self.event_callback(self.platform, evt)
+                self.event_callback(Platform.QQ, evt)
             else:
                 self.logger.warning("No event callback registered")
             
@@ -299,31 +302,40 @@ class QQDriver(BaseDriver):
         self.logger.warning("No active WebSocket connections")
         return False
         
-    def send_message(self, channel_id: str, content: str, **kwargs) -> Optional[str]:
+    def send_message(self, request: SendMessageRequest) -> Optional[str]:
         """发送消息
         
         Args:
-            channel_id: 目标频道ID (群号或用户ID)
-            content: 消息内容
-            **kwargs: 其他参数
-                - message_type: 消息类型 (group/private)
+            request: 发送消息请求
+            
+        Returns:
+            消息ID, 如果发送失败则返回 None
         """
+        # 检查是否需要处理这个请求
+        if request.platforms is not None and Platform.QQ not in request.platforms:
+            return None
+
         if not self.connected or not self.event_loop:
             self.logger.error("Cannot send message: driver not connected")
             return None
             
-        message_type = kwargs.get("message_type", "group")
-        self.logger.info(f"Sending {message_type} message to {channel_id}: {content}")
-        
         # 构造消息
+        message_type = "private" if request.channel.type == MessageType.PRIVATE else "group"
         action = "send_group_msg" if message_type == "group" else "send_private_msg"
+        
         data = {
             "action": action,
             "params": {
-                "message": content,
-                "group_id" if message_type == "group" else "user_id": int(channel_id)
+                "message": request.content,
+                "group_id" if message_type == "group" else "user_id": int(request.channel_id)
             }
         }
+
+        # 处理QQ特定的参数
+        if request.extra and hasattr(request.extra, 'at_sender'):
+            data["params"]["at_sender"] = request.extra.at_sender
+        if request.extra and hasattr(request.extra, 'auto_escape'):
+            data["params"]["auto_escape"] = request.extra.auto_escape
         
         async def _send():
             success = await self.send_ws_message(data)
@@ -331,41 +343,10 @@ class QQDriver(BaseDriver):
             
         future = asyncio.run_coroutine_threadsafe(_send(), self.event_loop)
         try:
-            return future.result(timeout=10)
+            return future.result(timeout=5)
         except Exception as e:
             self.logger.error(f"Error waiting for message result: {e}")
             return None
-        
-    def delete_message(self, channel_id: str, message_id: str) -> bool:
-        """删除消息
-        
-        Args:
-            channel_id: 频道ID (不使用)
-            message_id: 消息ID
-        """
-        if not self.connected or not self.event_loop:
-            self.logger.error("Cannot delete message: driver not connected")
-            return False
-            
-        self.logger.info(f"Deleting message {message_id}")
-        
-        # 构造消息
-        data = {
-            "action": "delete_msg",
-            "params": {
-                "message_id": int(message_id)
-            }
-        }
-        
-        async def _delete():
-            return await self.send_ws_message(data)
-                
-        future = asyncio.run_coroutine_threadsafe(_delete(), self.event_loop)
-        try:
-            return future.result(timeout=10)
-        except Exception as e:
-            self.logger.error(f"Error waiting for delete result: {e}")
-            return False
 
 # 导出
 __all__ = ["QQDriver"] 

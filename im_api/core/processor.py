@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from mcdreforged.api.all import *
 
@@ -6,6 +6,7 @@ from im_api.core.driver import DriverManager
 from im_api.core.bridge import MessageBridge
 from im_api.core.context import Context
 from im_api.models.parser import Event, Message
+from im_api.drivers.base import Platform, BaseDriver
 
 
 class EventProcessor:
@@ -24,7 +25,7 @@ class EventProcessor:
         self.message_bridge = message_bridge
         self.logger = Context.get_instance().logger
 
-    def on_message(self, platform: str, message: Message):
+    def on_message(self, platform: Platform, message: Message):
         """处理来自驱动的消息
 
         Args:
@@ -34,13 +35,8 @@ class EventProcessor:
         # 触发消息事件
         self.logger.info(f"Received message from {platform}: {message.content}")
         self.server.dispatch_event(LiteralEvent("im_api.message"), (platform, message))
-        # 触发回复消息事件
-        # if message.channel.get("id") == '3110942575':
-        #     kwargs = {"message_type": message.channel.get("type", "group")}
-        #     args = (platform, message.channel.get("id"), f'echo: {message.content}')
-        #     self.server.dispatch_event(LiteralEvent("im_api.send_message"), (args, kwargs))
 
-    def on_event(self, platform: str, event: Event):
+    def on_event(self, platform: Platform, event: Event):
         """处理来自驱动的事件
 
         Args:

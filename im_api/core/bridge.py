@@ -1,22 +1,18 @@
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Dict, Optional, Callable, List
 
 from mcdreforged.api.all import *
 
 from im_api.core.driver import DriverManager
 from im_api.core.context import Context
 from im_api.models.parser import Event, Message
+from im_api.models.request import SendMessageRequest, MessageType
 
 
 class MessageBridge:
     """消息桥接器，负责在 MCDR 和 IM 平台之间转换消息"""
 
     def __init__(self, server: ServerInterface, driver_manager: DriverManager):
-        """初始化消息桥接器
-
-        Args:
-            server: MCDR 服务器接口
-            driver_manager: 驱动管理器
-        """
+        """初始化消息桥接器"""
         self.server = server
         self.driver_manager = driver_manager
         self.logger = Context.get_instance().logger
@@ -39,47 +35,23 @@ class MessageBridge:
         self.server.register_event_listener(
             "im_api.send_message", self.on_send_message)
 
-    def on_send_message(self, server: ServerInterface, args: tuple, kwargs: dict):
-        """处理发送消息事件
-
-        Args:
-            server: MCDR 服务器接口
-            args: 位置参数 (platform, channel_id, content)
-            kwargs: 关键字参数
+    def on_send_message(self,server: PluginServerInterface, request: SendMessageRequest) -> List[str]:
         """
-        if len(args) != 3:
-            self.logger.error(f"Invalid arguments for send_message: {args}")
-            return
-            
-        platform, channel_id, content = args
-        self.logger.debug(f"Sending message to {platform}:{channel_id}: {content}")
-        message_id = self.send_message(platform, channel_id, content, **kwargs)
-        if message_id:
-            self.logger.info(f"Message sent to {platform}:{channel_id}: {content}")
-        
-
-    def send_message(self, platform: str, channel_id: str, content: str, **kwargs) -> Optional[str]:
-        """发送消息到 IM 平台
-
-        Args:
-            platform: 平台标识
-            channel_id: 目标频道ID
-            content: 消息内容
-            props: 其他平台特定参数
-
-        Returns:
-            消息ID, 如果发送失败则返回 None
+        处理消息发送事件
+        :param request: 发送消息请求
+        :return: 消息ID列表，如果没有成功发送则返回空列表
         """
-        driver = self.driver_manager.get_driver(platform)
-        if not driver:
-            self.logger.error(f"No driver found for platform: {platform}")
-            return None
+        # 遍历所有驱动，处理发送请求
+        results = []
+        for driver in self.driver_manager.get_all_drivers():
+            try:
+                result = driver.send_message(request)
+                if result:
+                    results.append(result)
+            except Exception as e:
+                self.logger.error(f"Error sending message via driver {driver}: {e}")
 
-        try:
-            return driver.send_message(channel_id, content, **kwargs)
-        except Exception as e:
-            self.logger.error(f"Error sending message: {e}")
-            return None
+        return results
 
     def on_server_startup(self, server: ServerInterface):
         """处理服务器启动事件"""

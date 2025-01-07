@@ -1,8 +1,9 @@
-from typing import Any, Dict, List, Optional, Type, Callable
+from typing import Any, Dict, List, Optional, Type, Callable, Union
 
 from im_api.core.context import Context
 from im_api.drivers.base import BaseDriver
 from im_api.models.parser import Event, Message
+from im_api.models.platform import Platform
 
 
 class DriverManager:
@@ -14,7 +15,7 @@ class DriverManager:
         self.instances: Dict[str, BaseDriver] = {}  # 驱动实例映射
         self.logger = Context.get_instance().logger
 
-    def register_driver(self, platform: str, driver_cls: Type[BaseDriver]) -> None:
+    def register_driver(self, platform: Union[Platform, str], driver_cls: Type[BaseDriver]) -> None:
         """注册驱动类
 
         Args:
@@ -24,7 +25,7 @@ class DriverManager:
         self.drivers[platform] = driver_cls
         self.logger.debug(f"Registered driver for platform: {platform}")
 
-    def load_driver(self, platform: str, config: Dict[str, Any]) -> None:
+    def load_driver(self, platform: Union[Platform, str], config: Dict[str, Any]) -> None:
         """加载驱动实例
 
         Args:
@@ -45,7 +46,7 @@ class DriverManager:
                 f"Failed to load driver for platform {platform}: {e}")
             raise
 
-    def unload_driver(self, platform: str) -> None:
+    def unload_driver(self, platform: Union[Platform, str]) -> None:
         """卸载驱动实例
 
         Args:
@@ -66,7 +67,7 @@ class DriverManager:
                 f"Failed to unload driver for platform {platform}: {e}")
             raise
 
-    def get_driver(self, platform: str) -> Optional[BaseDriver]:
+    def get_driver(self, platform: Union[Platform, str]) -> Optional[BaseDriver]:
         """获取驱动实例
 
         Args:

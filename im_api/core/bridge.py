@@ -4,7 +4,7 @@ from mcdreforged.api.all import *
 
 from im_api.core.driver import DriverManager
 from im_api.core.context import Context
-from im_api.models.parser import Event, Message
+from im_api.models.message import Event, Message
 from im_api.models.request import SendMessageRequest, MessageType
 
 

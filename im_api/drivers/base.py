@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Optional, Union
 
 from im_api.core.context import Context
-from im_api.models.parser import Event, Message
+from im_api.models.message import Event, Message
 from im_api.models.request import SendMessageRequest
 from im_api.models.platform import Platform
 

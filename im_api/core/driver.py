@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional, Type, Callable, Union
 
 from im_api.core.context import Context
 from im_api.drivers.base import BaseDriver
-from im_api.models.parser import Event, Message
+from im_api.models.message import Event, Message
 from im_api.models.platform import Platform
 
 

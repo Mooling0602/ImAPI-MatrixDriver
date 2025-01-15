@@ -1,8 +1,6 @@
 import asyncio
 import json
-import socket
 import threading
-import time
 from typing import Any, Optional
 
 from aiohttp import web
@@ -10,7 +8,7 @@ from aiocqhttp import CQHttp, Event as CQEvent
 from mcdreforged.api.all import *
 
 from im_api.drivers.base import BaseDriver, Platform
-from im_api.models.parser import Event, Message
+from im_api.models.message import Message, Event, User, Channel
 from im_api.models.request import SendMessageRequest, MessageType
 
 class QQDriver(BaseDriver):
@@ -50,15 +48,17 @@ class QQDriver(BaseDriver):
             message = Message(
                 id=str(event.message_id),
                 content=event.message,
-                channel={
-                    "id": str(event.group_id) if event.group_id else str(event.user_id),
-                    "type": "group" if event.group_id else "private"
-                },
-                user={
-                    "id": str(event.user_id),
-                    "name": event.sender.get("nickname", ""),
-                    "avatar": f"http://q1.qlogo.cn/g?b=qq&nk={event.user_id}&s=640"
-                }
+                channel=Channel(
+                    id=str(event.group_id) if event.group_id else str(event.user_id),
+                    type="group" if event.group_id else "private",
+                    name=event.group_name if hasattr(event, 'group_name') else None
+                ),
+                user=User(
+                    id=str(event.user_id),
+                    name=event.sender.get("nickname", ""),
+                    avatar=f"http://q1.qlogo.cn/g?b=qq&nk={event.user_id}&s=640"
+                ),
+                platform=Platform.QQ
             )
             self.logger.debug(f"Received message: {message.content} from {message.user['id']} in {message.channel['id']}")
             # 触发消息事件

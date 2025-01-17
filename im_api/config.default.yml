@@ -1,0 +1,31 @@
+# IM API 插件配置文件
+
+# 驱动配置
+drivers:
+  # QQ 驱动配置
+  - enabled: true
+    platform: qq
+    # 连接类型: ws_server(Onebot反向WS) 或 ws_client(Onebot正向WS)
+    connection_type: ws_server
+    # 反向 WebSocket 配置 (connection_type 为 ws_server 时使用)
+    ws_server:
+      host: 0.0.0.0
+      port: 8080
+      access_token: ""   # 访问令牌，留空则不验证
+      url_prefix: /ws/   # WebSocket URL前缀
+    
+    # 正向 WebSocket 配置 (connection_type 为 ws_client 时使用)
+    ws_client:
+      ws_url: ws://127.0.0.1:6700
+      access_token: ""   # 访问令牌，留空则不验证
+      heartbeat: 30  # 心跳间隔（秒）
+  
+  # KOOK 驱动配置
+  - enabled: false
+    platform: kook
+    token: ""
+  
+  # Discord 驱动配置
+  - enabled: false
+    platform: discord
+    token: ""

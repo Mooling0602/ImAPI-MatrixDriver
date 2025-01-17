@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 from mcdreforged.api.types import PluginServerInterface, CommandSource, Info
 from mcdreforged.api.command import Literal
 
+from im_api.config import ImAPIConfig
 from im_api.core.driver import DriverManager
 from im_api.core.processor import EventProcessor
 from im_api.core.bridge import MessageBridge
@@ -30,45 +31,31 @@ class ImAPI:
         # 注册驱动
         self.driver_manager.register_driver(Platform.QQ, QQDriver)
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> ImAPIConfig:
         """加载配置文件"""
-        return self.server.load_config_simple("config.json", default_config={
-            "drivers": {
-                # 示例配置
-                "qq": {
-                    "enabled": False,
-                    "config": {
-                        "host": "127.0.0.1",
-                        "port": 8080,
-                        "access_token": ""
-                    }
-                },
-                "kook": {
-                    "enabled": False,
-                    "config": {
-                        "token": ""
-                    }
-                }
-            }})
+        return Context.get_instance().load_config()
 
-    def load(self):
+    def load(self) -> bool:
         """加载插件"""
         self.logger.info("Loading ImAPI...")
+        if self.config is None:
+            self.logger.error("Failed to load configuration")
+            return False
 
         # 加载驱动
-        for platform, driver_config in self.config["drivers"].items():
-            platform = Platform.from_string(platform)
-            if not driver_config.get("enabled", False):
+        for driver_config in self.config.drivers:
+            platform = driver_config.platform
+            if not driver_config.enabled:
                 continue
 
             try:
                 self.driver_manager.load_driver(
-                    platform, driver_config["config"])
+                    platform, driver_config)
                 self.logger.info(f"Loaded driver for platform: {platform}")
             except Exception as e:
                 self.logger.error(
                     f"Failed to load driver for platform {platform}: {e}")
-
+                return False
         # 注册驱动回调
         self.driver_manager.register_callbacks(
             lambda platform, msg: self.event_processor.on_message(platform, msg),
@@ -80,16 +67,13 @@ class ImAPI:
         self.server.register_command(
             Literal("!!im").
             then(
-                Literal("reload").
-                runs(lambda src: self.reload(src))
-            ).
-            then(
                 Literal("status").
                 runs(lambda src: self.show_status(src))
             )
         )
 
         self.logger.info("ImAPI loaded successfully")
+        return True
 
     def unload(self):
         """卸载插件"""
@@ -101,16 +85,16 @@ class ImAPI:
         time.sleep(1)
         self.logger.info("ImAPI unloaded successfully")
 
-    def reload(self, source: CommandSource):
-        """重载插件"""
-        self.logger.info("Reloading ImAPI...")
-        # 先卸载旧实例
-        self.unload()
-        # 重新加载配置
-        self.config = self._load_config()
-        # 重新加载插件
-        self.load()
-        source.reply("ImAPI reloaded successfully")
+    # def reload(self, source: CommandSource):
+    #     """重载插件"""
+    #     self.logger.info("Reloading ImAPI...")
+    #     # 先卸载旧实例
+    #     self.unload()
+    #     # 重新加载配置
+    #     self.config = self._load_config()
+    #     # 重新加载插件
+    #     self.load()
+    #     source.reply("ImAPI reloaded successfully")
 
     def show_status(self, source: CommandSource):
         """显示插件状态"""
@@ -141,7 +125,8 @@ def on_load(server: PluginServerInterface, old_module):
     
     # 创建新实例并加载
     api = ImAPI(server)
-    api.load()  # 先完成加载
+    if not api.load():
+        return server.unload_plugin(ImAPI.PLUGIN_ID)
     context.set_api(api)  # 加载完成后再设置到 Context 中
     
     return api

@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Optional, Type, Callable, Union
 
+from im_api.config import QQConfig
 from im_api.core.context import Context
 from im_api.drivers.base import BaseDriver
 from im_api.models.message import Event, Message
@@ -25,7 +26,7 @@ class DriverManager:
         self.drivers[platform] = driver_cls
         self.logger.debug(f"Registered driver for platform: {platform}")
 
-    def load_driver(self, platform: Union[Platform, str], config: Dict[str, Any]) -> None:
+    def load_driver(self, platform: Union[Platform, str], config: QQConfig) -> None:
         """加载驱动实例
 
         Args:

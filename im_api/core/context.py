@@ -1,6 +1,8 @@
 from typing import Optional, TYPE_CHECKING
+from pathlib import Path
 
 from mcdreforged.api.all import *
+from im_api.config import ImAPIConfig
 
 if TYPE_CHECKING:
     from im_api.core.entry import ImAPI
@@ -14,6 +16,7 @@ class Context:
         self.server: Optional[ServerInterface] = None
         self.api: Optional['ImAPI'] = None
         self._initialized = False
+        self.config: Optional[ImAPIConfig] = None
     
     @property
     def logger(self):
@@ -24,7 +27,6 @@ class Context:
     
     @classmethod
     def get_instance(cls) -> 'Context':
-        """获取全局实例"""
         if cls._instance is None:
             cls._instance = Context()
         return cls._instance
@@ -78,6 +80,18 @@ class Context:
         if cls._instance is not None:
             cls._instance.reset()
             cls._instance = None
+    
+    def load_config(self) -> ImAPIConfig:
+        """加载配置文件"""
+        try:
+            # 获取MCDR工作目录
+            mcdr_work_dir = Path(self.server.get_mcdr_config()['working_directory']).parent
+            self.config = ImAPIConfig.load(mcdr_work_dir)
+            self.logger.info("Configuration loaded successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to load configuration: {e}")
+            self.config = None
+        return self.config
 
 # 导出
 __all__ = ['Context'] 

@@ -44,7 +44,7 @@ class EventProcessor:
             event: 事件对象
         """
         # 触发事件
-        self.logger.debug(f"Received event from {platform}: {event.type}")
+        self.logger.info(f"Received event from {platform}: {event.type}")
         self.server.dispatch_event(LiteralEvent("im_api.event"), (platform, event))
 
 

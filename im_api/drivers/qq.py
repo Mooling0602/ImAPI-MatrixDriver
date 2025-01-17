@@ -89,7 +89,7 @@ class QQDriver(BaseDriver):
             
         @self.bot.on_notice
         async def handle_notice(event: CQEvent):
-            self.logger.debug(f"Received notice: {event.notice_type} from {event.user_id}")
+            self.logger.info(f"Received notice: {event.notice_type} from {event.user_id}")
             # 转换为 Satori 事件格式
             if event.notice_type == "group_increase":
                 evt = Event(
@@ -169,7 +169,6 @@ class QQDriver(BaseDriver):
                 return ws
             
         # 只在初始化时注册一次路由
-        print(self.url_prefix)
         self.app.router.add_get(f"{self.url_prefix}", handle_ws)  # 使用配置的URL前缀
             
     def connect(self) -> None:

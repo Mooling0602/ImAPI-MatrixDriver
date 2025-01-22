@@ -169,7 +169,10 @@ class QQDriver(BaseDriver):
                 return ws
             
         # 只在初始化时注册一次路由
-        self.app.router.add_get(f"{self.url_prefix}", handle_ws)  # 使用配置的URL前缀
+        if(self.connection_type == ConnectionType.WS_SERVER):
+            self.app.router.add_get(f"{self.url_prefix}", handle_ws)  # 使用配置的URL前缀
+        else:
+            self.app.router.add_get("/", handle_ws)
             
     def connect(self) -> None:
         """连接到平台"""

@@ -51,7 +51,6 @@ class ImAPI:
             try:
                 self.driver_manager.load_driver(
                     platform, driver_config)
-                self.logger.info(f"Loaded driver for platform: {platform}")
             except Exception as e:
                 self.logger.error(
                     f"Failed to load driver for platform {platform}: {e}")

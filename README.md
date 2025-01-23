@@ -1,5 +1,4 @@
-# ImAPI架构
-
+![ImAPI](https://socialify.git.ci/MCDReforged-Towhee-Community/ImAPI/image?description=1&font=Inter&forks=1&issues=1&language=1&name=1&owner=1&pattern=Plus&pulls=1&stargazers=1&theme=Auto)
 ## 概要说明
 
 以ImAPI作为核心插件的架构，主要有如下几个角色
@@ -45,7 +44,7 @@ sub-plugin --注册插件--> mcdr
 
 ### 概述
 
-1. SatoriAPI加载时，根据配置文件启动对应的receiver
+1. ImAPI加载时，根据配置文件启动对应的receiver
 2. Reactor加载时，向MCDR发送register事件，ImAPI会监听这个事件，将对应插件添加到注册表
 
 ### 加载流程图
@@ -58,20 +57,20 @@ participant api as ImAPI
 participant rtr as Reactor
 actor plat as Platform
 
-player ->>+ mcdr: start/reload satori
+player ->>+ mcdr: start/reload im_api
 mcdr ->>+ api: load plugin
 api ->> api: load drivers
 api -->- mcdr: load finish
 
 mcdr ->>+ rtr: load receiver
 rtr -->>- mcdr: load finish
-mcdr -->>- player: start/reload satori finish
+mcdr -->>- player: start/reload im_api finish
 
 plat ->> api: msg/event from platform
 api ->> api: process msg/event
-api -) mcdr: send [react] event
-mcdr  -) rtr: forward [react] event
-rtr ->> rtr: process satori event
+api -) mcdr: send [im_api] event
+mcdr  -) rtr: forward [im_api] event
+rtr ->> rtr: process im_api event
 rtr ->> plat: [optional] reply event
 rtr ->> mcdr: [optional] operate mc server
 ```

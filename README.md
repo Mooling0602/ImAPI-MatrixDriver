@@ -82,6 +82,7 @@ flowchart LR
         subgraph ImAPI-Core
             driver[DriverManager]
             ep[EventProcessor]
+            message_bridge[MessageBridge]
         end
         subgraph ImAPI-Driver
             qq[QQDriver]

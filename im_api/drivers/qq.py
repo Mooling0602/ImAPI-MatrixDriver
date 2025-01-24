@@ -60,73 +60,8 @@ class QQDriver(BaseDriver):
         self.ws_locks = {}  # WebSocket 连接的锁
 
         # 注册事件处理器
-        @self.bot.on_message
-        async def handle_msg(event: CQEvent):
-            self.logger.debug(f"Received message: {event.message} from {event.user_id}")
-            # 转换为 Satori 消息格式
-            message = Message(
-                id=str(event.message_id),
-                content=event.message,
-                channel=Channel(
-                    id=str(event.group_id) if event.group_id else str(event.user_id),
-                    type="group" if event.group_id else "private",
-                    name=event.group_name if hasattr(event, 'group_name') else None
-                ),
-                user=User(
-                    id=str(event.user_id),
-                    name=event.sender.get("nickname", ""),
-                    avatar=f"http://q1.qlogo.cn/g?b=qq&nk={event.user_id}&s=640"
-                ),
-                platform=Platform.QQ
-            )
-            self.logger.debug(f"Received message: {message.content} from {message.user.id} in {message.channel.id}")
-            # 触发消息事件
-            if self.message_callback:
-                self.message_callback(Platform.QQ, message)
-                self.logger.debug("Message forwarded to MCDR")
-            else:
-                self.logger.warning("No message callback registered")
-            
-        @self.bot.on_notice
-        async def handle_notice(event: CQEvent):
-            self.logger.info(f"Received notice: {event.notice_type} from {event.user_id}")
-            # 转换为 Satori 事件格式
-            if event.notice_type == "group_increase":
-                evt = Event(
-                    id=str(event.time),
-                    type="guild.member.join",
-                    platform=Platform.QQ,
-                    channel=Channel(
-                        id=str(event.group_id),
-                        type="group"
-                    ),
-                    user=User(
-                        id=str(event.user_id)
-                    )
-                )
-            elif event.notice_type == "group_decrease":
-                evt = Event(
-                    id=str(event.time),
-                    type="guild.member.leave",
-                    platform=Platform.QQ,
-                    channel=Channel(
-                        id=str(event.group_id),
-                        type="group"
-                    ),
-                    user=User(
-                        id=str(event.user_id)
-                    )
-                )
-            else:
-                self.logger.debug(f"Ignoring unsupported notice type: {event.notice_type}")
-                return
-                
-            # 触发事件
-            if self.event_callback:
-                self.logger.debug(f"Forwarding event to MCDR: {evt}")
-                self.event_callback(Platform.QQ, evt)
-            else:
-                self.logger.warning("No event callback registered")
+        self.bot.on_message(self.handle_msg)
+        self.bot.on_notice(self.handle_notice)
             
         async def handle_ws(request):
             """处理 WebSocket 连接"""
@@ -154,9 +89,9 @@ class QQDriver(BaseDriver):
                             # 创建事件对象并处理
                             event = CQEvent.from_payload(data)
                             if event.type == "message":
-                                await handle_msg(event)
+                                await self.handle_msg(event)
                             elif event.type == "notice":
-                                await handle_notice(event)
+                                await self.handle_notice(event)
                         except Exception as e:
                             self.logger.error(f"Error handling WebSocket message: {e}")
                     elif msg.type == web.WSMsgType.ERROR:
@@ -173,7 +108,75 @@ class QQDriver(BaseDriver):
             self.app.router.add_get(f"{self.url_prefix}", handle_ws)  # 使用配置的URL前缀
         else:
             self.app.router.add_get("/", handle_ws)
+
+    async def handle_msg(self, event: CQEvent):
+        """处理消息事件"""
+        self.logger.debug(f"Received message: {event.message} from {event.user_id}")
+        # 转换为 Satori 消息格式
+        message = Message(
+            id=str(event.message_id),
+            content=event.message,
+            channel=Channel(
+                id=str(event.group_id) if event.group_id else str(event.user_id),
+                type="group" if event.group_id else "private",
+                name=event.group_name if hasattr(event, 'group_name') else None
+            ),
+            user=User(
+                id=str(event.user_id),
+                name=event.sender.get("nickname", ""),
+                avatar=f"http://q1.qlogo.cn/g?b=qq&nk={event.user_id}&s=640"
+            ),
+            platform=Platform.QQ
+        )
+        self.logger.debug(f"Received message: {message.content} from {message.user.id} in {message.channel.id}")
+        # 触发消息事件
+        if self.message_callback:
+            self.message_callback(Platform.QQ, message)
+            self.logger.debug("Message forwarded to MCDR")
+        else:
+            self.logger.warning("No message callback registered")
+
+    async def handle_notice(self, event: CQEvent):
+        """处理通知事件"""
+        self.logger.info(f"Received notice: {event.notice_type} from {event.user_id}")
+        # 转换为 Satori 事件格式
+        if event.notice_type == "group_increase":
+            evt = Event(
+                id=str(event.time),
+                type="guild.member.join",
+                platform=Platform.QQ,
+                channel=Channel(
+                    id=str(event.group_id),
+                    type="group"
+                ),
+                user=User(
+                    id=str(event.user_id)
+                )
+            )
+        elif event.notice_type == "group_decrease":
+            evt = Event(
+                id=str(event.time),
+                type="guild.member.leave",
+                platform=Platform.QQ,
+                channel=Channel(
+                    id=str(event.group_id),
+                    type="group"
+                ),
+                user=User(
+                    id=str(event.user_id)
+                )
+            )
+        else:
+            self.logger.debug(f"Ignoring unsupported notice type: {event.notice_type}")
+            return
             
+        # 触发事件
+        if self.event_callback:
+            self.logger.debug(f"Forwarding event to MCDR: {evt}")
+            self.event_callback(Platform.QQ, evt)
+        else:
+            self.logger.warning("No event callback registered")
+
     def connect(self) -> None:
         """连接到平台"""
         if self.connected:
@@ -395,9 +398,9 @@ class QQDriver(BaseDriver):
                             # 创建事件对象并处理
                             event = CQEvent.from_payload(data)
                             if event.type == "message":
-                                await handle_msg(event)
+                                await self.handle_msg(event)
                             elif event.type == "notice":
-                                await handle_notice(event)
+                                await self.handle_notice(event)
                         except Exception as e:
                             self.logger.error(f"Error handling WebSocket message: {e}")
                     elif msg.type in [web.WSMsgType.CLOSED, web.WSMsgType.ERROR]:
@@ -425,4 +428,4 @@ class QQDriver(BaseDriver):
             raise
 
 # 导出
-__all__ = ["QQDriver"] 
+__all__ = ["QQDriver"]

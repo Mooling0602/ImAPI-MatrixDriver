@@ -51,7 +51,7 @@ jobs:
       - name: Pack
         id: pack
         run: |
-          mcdreforged pack --ignore-patterns __pycache__ -i ${{ needs.release-please.outputs.path }}
+          mcdreforged pack --ignore-patterns __pycache__
           echo "name=$(ls *.mcdr)" >> $GITHUB_OUTPUT
 
       - name: Upload

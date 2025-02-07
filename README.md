@@ -13,9 +13,9 @@
 
 下游如果想和平台交互，可以通过发送`ImAPI`订阅的事件到`MCDR`以通过`ImAPI`向平台发送消息或者进行操作。
 
-### 事件支持
+### 能力支持
 
-|事件\平台|QQ|Telegram|Discord|Kook|Metrix|
+|事件\平台|QQ|Telegram|Discord|Kook|Matrix|
 |:-:|:-:|:-:|:-:|:-:|:-:|
 |接收私聊消息|✅|✅||||
 |发送私聊消息|✅|✅||||

@@ -143,7 +143,7 @@ class ImAPIConfig:
                 ))
             elif platform == 'matrix':
                 drivers.append(MatrixConfig(
-                    enabled=driver_data.get('enanled', False),
+                    enabled=driver_data.get('enabled', False),
                     account=driver_data.get('account', None),
                     homeserver=driver_data.get('homeserver', 'example.com')
                 ))

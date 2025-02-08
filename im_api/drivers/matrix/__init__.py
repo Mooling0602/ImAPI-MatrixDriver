@@ -1,7 +1,7 @@
 import asyncio
 
 from typing import Optional
-from nio import AsyncClient, SyncError, UploadFilterError , RoomMessageText, RoomSendResponse
+from nio import AsyncClient, SyncError, SyncResponse, UploadFilterError, UploadFilterResponse, RoomMessageText, RoomSendResponse
 from mcdreforged.api.decorator import new_thread
 
 from im_api.models.request import SendMessageRequest
@@ -9,7 +9,9 @@ from im_api.models.platform import Platform
 from im_api.drivers import BaseDriver
 from im_api.config import MatrixConfig
 
-from .resp import textmsg_callback, on_sync_error
+from .resp import textmsg_callback, on_sync_error, on_sync_response
+
+receiver = None
 
 class MatrixDriver(BaseDriver):
     """
@@ -23,15 +25,17 @@ class MatrixDriver(BaseDriver):
     
     def __init__(self, config: MatrixConfig):
         """初始化驱动"""
+        super().__init__(config)
         self.user_id = config.user_id
         self.token = config.token
         self.homeserver = config.homeserver
-        self.client = AsyncClient(homeserver=self.homeserver, device_id='mcdr')
+        self.logger.info(f"Debug: {self.homeserver}")
+        self.client = AsyncClient(homeserver=self.homeserver)
         self.client.user_id = self.user_id
         self.client.access_token = self.token
-        self.receiver = None
+        self.client.device_id = 'mcdr'
 
-        self.logger.info(f"Initializing matrix driver with connection_type={self.connection_type}")
+        self.logger.info(f"Initializing matrix driver...")
         
     def connect(self) -> None:
         """和Matrix平台同步各种事件"""
@@ -39,36 +43,41 @@ class MatrixDriver(BaseDriver):
             return
 
         async def receive_messages() -> None:
-            client = self.client
-
-            # 响应同步错误
-            client.add_response_callback(on_sync_error, SyncError)
-            filter_data = {"timeline": {"not_senders": [client.user_id]}}
-            filter_resp = await client.upload_filter(room=filter_data)
-            if isinstance(filter_resp, UploadFilterError):
-                self.logger.error(filter_resp)
+            self.client.add_response_callback(on_sync_response, SyncResponse)
+            self.client.add_response_callback(on_sync_error, SyncError)
             import im_api.drivers.matrix.resp as resp
             if resp.homeserver_online:
-                await client.sync()
-                client.add_event_callback(textmsg_callback, RoomMessageText)
-                try:
-                    self.receiver = asyncio.create_task(client.sync_forever(sync_filter=resp.filter_id))
-                except asyncio.CancelledError:
-                    self.logger.warning('Receiver task has been cancelled!')
-                except Exception as e:
-                    self.logger.error(f"Receiver sync error: {e}", "Receiver")
-                    self.receiver.cancel()
-                finally:
-                    if self.receiver:
-                        self.receiver.cancel()
-                    if client is not None:
-                        await client.close
+                # await self.client.sync()
+                self.client.add_event_callback(textmsg_callback, RoomMessageText)
+                global receiver
+                self.logger.info("Creating receiver task...")
+                receiver = asyncio.create_task(self.client.sync_forever(timeout=30000))
+                # try:
+                #     await self.client.sync(timeout=5)
+                #     self.client.add_event_callback(textmsg_callback, RoomMessageText)
+                #     self.receiver = asyncio.create_task(self.client.sync_forever(timeout=5))
+                # except asyncio.CancelledError:
+                #     self.logger.warning('Receiver task has been cancelled!')
+                # except Exception as e:
+                #     self.logger.error(f"Receiver sync error: {e}", "Receiver")
+                #     if isinstance(self.receiver, asyncio.Task):
+                #         self.logger.error("Cancelling receiver task...")
+                #         self.receiver.cancel()
+                # finally:
+                #     if isinstance(self.receiver, asyncio.Task):
+                #         self.logger.error("Cancelling receiver task...")
+                #         self.receiver.cancel()
+                #     if self.client is not None:
+                #         self.logger.error("Cancelling receiver client...")
+                #         await self.client.close()
             
         async def add_sync_task():
+            self.logger.info("Starting event loop...")
             await receive_messages()
 
         @new_thread('ImAPI: MatrixReceiver')
         def run_sync_task():
+            self.logger.info("Starting receiver task...")
             asyncio.run(add_sync_task())
 
         run_sync_task()
@@ -79,8 +88,9 @@ class MatrixDriver(BaseDriver):
         if not self.connected:
             return
 
-        if isinstance(self.receiver, asyncio.Task):
-            self.receiver.cancel()
+        if isinstance(receiver, asyncio.Task):
+            receiver.cancel()
+            self.connected = False
         
     def send_message(self, request: SendMessageRequest) -> Optional[str]:
         """发送消息

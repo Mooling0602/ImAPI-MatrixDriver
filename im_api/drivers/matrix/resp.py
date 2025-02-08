@@ -1,4 +1,4 @@
-from nio import SyncError, MatrixRoom, RoomMessageText
+from nio import SyncError, SyncResponse, MatrixRoom, RoomMessageText
 
 from im_api.core.context import Context
 from im_api.models.message import Message, Channel, User
@@ -8,11 +8,15 @@ homeserver_online = True
 
 def on_sync_error(self, response: SyncError):
     global homeserver_online
-    self.logger.error(f"Sync error in matrix: {response.status_code}", "Receiver")
+    self.logger.error(f"Sync error in matrix: {response.status_code}")
     if response.status_code >= 500:
         homeserver_online = False
 
+def on_sync_response(self, response: SyncResponse):
+    self.logger.info(response.next_batch)
+
 def textmsg_callback(self, room: MatrixRoom, event: RoomMessageText) -> None:
+    print(f"[{room.display_name}] <{room.user_name(event.sender)}> {event.body}")
     message = Message(
         id=event.event_id,
         content=event.body,

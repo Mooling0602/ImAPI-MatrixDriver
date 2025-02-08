@@ -9,9 +9,7 @@ from im_api.models.platform import Platform
 from im_api.drivers import BaseDriver
 from im_api.config import MatrixConfig
 
-from .resp import textmsg_callback, on_sync_error, on_sync_response
-
-receiver = None
+from .resp import get_message_callback, get_sync_error, get_sync_response
 
 class MatrixDriver(BaseDriver):
     """
@@ -35,23 +33,26 @@ class MatrixDriver(BaseDriver):
         self.client.access_token = self.token
         self.client.device_id = 'mcdr'
 
+        self.receiver = None
+
         self.logger.info(f"Initializing matrix driver...")
         
     def connect(self) -> None:
         """和Matrix平台同步各种事件"""
         if self.connected:
+            self.logger.warning("连接已经启动！")
             return
 
         async def receive_messages() -> None:
-            self.client.add_response_callback(on_sync_response, SyncResponse)
-            self.client.add_response_callback(on_sync_error, SyncError)
+
+            self.client.add_response_callback(get_sync_response(self), SyncResponse)
+            self.client.add_response_callback(get_sync_error(self), SyncError)
             import im_api.drivers.matrix.resp as resp
             if resp.homeserver_online:
-                # await self.client.sync()
-                self.client.add_event_callback(textmsg_callback, RoomMessageText)
-                global receiver
+                await self.client.sync()
+                self.client.add_event_callback(get_message_callback(self), RoomMessageText)
                 self.logger.info("Creating receiver task...")
-                receiver = asyncio.create_task(self.client.sync_forever(timeout=30000))
+                self.receiver = asyncio.create_task(self.client.sync_forever(timeout=30000))
                 # try:
                 #     await self.client.sync(timeout=5)
                 #     self.client.add_event_callback(textmsg_callback, RoomMessageText)
@@ -88,9 +89,14 @@ class MatrixDriver(BaseDriver):
         if not self.connected:
             return
 
-        if isinstance(receiver, asyncio.Task):
-            receiver.cancel()
+        if isinstance(self.receiver, asyncio.Task):
+            self.logger.info("正在断开Matrix平台的连接...")
+            # receiver.cancel()
+            asyncio.run(self.client.close())
+            self.receiver.cancel()
             self.connected = False
+        else:
+            print(self.receiver) # 临时调试用，修好了删
         
     def send_message(self, request: SendMessageRequest) -> Optional[str]:
         """发送消息

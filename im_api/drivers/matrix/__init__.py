@@ -30,6 +30,8 @@ class MatrixDriver(BaseDriver):
         self.client.user_id = self.user_id
         self.client.access_token = self.token
         self.receiver = None
+
+        self.logger.info(f"Initializing matrix driver with connection_type={self.connection_type}")
         
     def connect(self) -> None:
         """和Matrix平台同步各种事件"""

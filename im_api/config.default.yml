@@ -25,3 +25,11 @@ drivers:
     platform: telegram
     token: ""
     http_proxy: ""
+
+  # Matrix 驱动配置
+  - enabled: false
+    platform: matrix
+    account:
+      user_id: ""
+      token: ""
+    homeserver: "example.com" # 家服务器需要支持https才能使用

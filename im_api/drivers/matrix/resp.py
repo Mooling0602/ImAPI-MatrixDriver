@@ -1,6 +1,5 @@
 from nio import SyncError, SyncResponse, MatrixRoom, RoomMessageText
 
-from im_api.core.context import Context
 from im_api.models.message import Message, Channel, User
 from im_api.models.platform import Platform
 
@@ -15,30 +14,32 @@ def get_sync_error(self):
     return on_sync_error
 
 def get_sync_response(self):
-    def on_sync_response(response: SyncResponse):
-        self.logger.info(response.next_batch)
+    async def on_sync_response(response: SyncResponse):
+        self.logger.debug(response)
     return on_sync_response
 
-def get_message_callback(self):
-    def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
-        print(f"[{room.display_name}] <{room.user_name(event.sender)}> {event.body}")
-        message = Message(
-            id=event.event_id,
-            content=event.body,
-            channel=Channel(
-                id=room.room_id,
-                type="group",
-                name=room.display_name
-            ),
-            user=User(
-                id=event.sender,
-                name=self.client.get_displayname(event.sender),
-                nick=room.user_name(event.sender),
-                avatar=self.client.get_avatar(event.sender)
-            ),
-            platform=Platform.MATRIX
-        )
+def get_message_callback(self, client):
+    async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
+        if event.sender != self.user_id:
+            # 防止刷屏，用debug
+            self.logger.debug(f"消息预览：[{room.display_name}] <{room.user_name(event.sender)}> {event.body}")
+            message = Message(
+                id=event.event_id,
+                content=event.body,
+                channel=Channel(
+                    id=room.room_id,
+                    type="group",
+                    name=room.display_name
+                ),
+                user=User(
+                    id=event.sender,
+                    name=await client.get_displayname(event.sender),
+                    nick=room.user_name(event.sender),
+                    avatar=await client.get_avatar(event.sender)
+                ),
+                platform=Platform.MATRIX
+            )
 
-        if self.message_callback:
-            self.message_callback(Platform.MATRIX, message)
+            if self.message_callback:
+                self.message_callback(Platform.MATRIX, message)
     return message_callback

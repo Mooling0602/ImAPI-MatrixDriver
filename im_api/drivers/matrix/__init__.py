@@ -28,59 +28,60 @@ class MatrixDriver(BaseDriver):
         self.token = config.token
         self.homeserver = config.homeserver
         self.logger.info(f"Debug: {self.homeserver}")
-        self.client = AsyncClient(homeserver=self.homeserver)
-        self.client.user_id = self.user_id
-        self.client.access_token = self.token
-        self.client.device_id = 'mcdr'
 
         self.receiver = None
-
-        self.logger.info(f"Initializing matrix driver...")
+        
+        self.logger.info(f"Initializing config for matrix driver...")
         
     def connect(self) -> None:
         """和Matrix平台同步各种事件"""
         if self.connected:
-            self.logger.warning("连接已经启动！")
+            self.logger.warning("Has connected matrix driver!")
             return
 
         async def receive_messages() -> None:
+            # create client instance.
+            client = AsyncClient(homeserver=self.homeserver)
+            client.user_id = self.user_id
+            client.access_token = self.token
+            client.device_id = 'mcdr'
 
-            self.client.add_response_callback(get_sync_response(self), SyncResponse)
-            self.client.add_response_callback(get_sync_error(self), SyncError)
+            client.add_response_callback(get_sync_response(self), SyncResponse)
+            client.add_response_callback(get_sync_error(self), SyncError)
+
             import im_api.drivers.matrix.resp as resp
             if resp.homeserver_online:
-                await self.client.sync()
-                self.client.add_event_callback(get_message_callback(self), RoomMessageText)
+                # self.client.add_event_callback(get_message_callback(self), RoomMessageText)
+                await client.sync(timeout=30000)
+                client.add_event_callback(get_message_callback(self, client), RoomMessageText)
                 self.logger.info("Creating receiver task...")
-                self.receiver = asyncio.create_task(self.client.sync_forever(timeout=30000))
-                # try:
-                #     await self.client.sync(timeout=5)
-                #     self.client.add_event_callback(textmsg_callback, RoomMessageText)
-                #     self.receiver = asyncio.create_task(self.client.sync_forever(timeout=5))
-                # except asyncio.CancelledError:
-                #     self.logger.warning('Receiver task has been cancelled!')
-                # except Exception as e:
-                #     self.logger.error(f"Receiver sync error: {e}", "Receiver")
-                #     if isinstance(self.receiver, asyncio.Task):
-                #         self.logger.error("Cancelling receiver task...")
-                #         self.receiver.cancel()
-                # finally:
-                #     if isinstance(self.receiver, asyncio.Task):
-                #         self.logger.error("Cancelling receiver task...")
-                #         self.receiver.cancel()
-                #     if self.client is not None:
-                #         self.logger.error("Cancelling receiver client...")
-                #         await self.client.close()
+                self.receiver = asyncio.create_task(client.sync_forever(timeout=30000))
+                try:
+                    await self.receiver
+                except asyncio.CancelledError:
+                    self.logger.warning('Receiver task has been cancelled!')
+                except Exception as e:
+                    self.logger.error(f"Receiver sync error: {e}", "Receiver")
+                    if isinstance(self.receiver, asyncio.Task):
+                        self.logger.error("Cancelling receiver task...")
+                        self.receiver.cancel()
+                finally:
+                    if isinstance(self.receiver, asyncio.Task):
+                        self.logger.error("Cancelling receiver task...")
+                        self.receiver.cancel()
+                    if client is not None:
+                        self.logger.error("Cancelling receiver client...")
+                        await client.close()
             
         async def add_sync_task():
-            self.logger.info("Starting event loop...")
+            self.logger.debug("Starting receiver event loop...")
             await receive_messages()
 
         @new_thread('ImAPI: MatrixReceiver')
         def run_sync_task():
             self.logger.info("Starting receiver task...")
             asyncio.run(add_sync_task())
-
+        
         run_sync_task()
         self.connected = True
         
@@ -90,13 +91,11 @@ class MatrixDriver(BaseDriver):
             return
 
         if isinstance(self.receiver, asyncio.Task):
-            self.logger.info("正在断开Matrix平台的连接...")
-            # receiver.cancel()
-            asyncio.run(self.client.close())
+            self.logger.info("Disconnecting matrix driver...")
             self.receiver.cancel()
             self.connected = False
         else:
-            print(self.receiver) # 临时调试用，修好了删
+            self.logger.debug(self.receiver) # For debugging
         
     def send_message(self, request: SendMessageRequest) -> Optional[str]:
         """发送消息
@@ -111,18 +110,21 @@ class MatrixDriver(BaseDriver):
             self.logger.error("Cannot send message: driver not connected")
             return None
         async def _send_message():
-            client = self.client
-            return await client.room_send(
+            # create client instance.
+            client = AsyncClient(homeserver=self.homeserver)
+            client.user_id = self.user_id
+            client.access_token = self.token
+            client.device_id = 'mcdr'
+            send_resp = await client.room_send(
                 room_id=request.channel_id,
                 message_type="m.room.message",
                 content={"msgtype": "m.text", "body": request.content},
             )
+            await client.close()
+            return send_resp
         try:
-            future = asyncio.run_coroutine_threadsafe(_send_message(), self.event_loop)
-            # 最多等待5s
-            result = future.result(timeout=5)
-            if isinstance(result, RoomSendResponse):
-                return str(result.event_id)
+            response = asyncio.run(_send_message())
+            return str(response.event_id)
         except Exception as e:
             self.logger.error(f"Error sending message: {e}")
             return None

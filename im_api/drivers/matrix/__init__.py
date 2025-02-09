@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from typing import Optional
 from nio import AsyncClient, SyncError, SyncResponse, UploadFilterError, UploadFilterResponse, RoomMessageText, RoomSendResponse
@@ -10,6 +11,8 @@ from im_api.drivers import BaseDriver
 from im_api.config import MatrixConfig
 
 from .resp import get_message_callback, get_sync_error, get_sync_response
+
+logging.getLogger('nio').setLevel(logging.WARNING)
 
 class MatrixDriver(BaseDriver):
     """

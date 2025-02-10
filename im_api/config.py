@@ -63,6 +63,20 @@ class TelegramConfig(DriverConfig):
         self.token = token
         self.http_proxy = http_proxy
 
+class MatrixConfig(DriverConfig):
+    """Matrix驱动配置"""
+    account: dict = {
+        'user_id': str,
+        'token': str 
+    }
+    homeserver: str
+
+    def __init__(self, enabled: bool, account: dict, homeserver: str):
+        super().__init__(enabled, Platform.MATRIX)
+        self.user_id = account.get('user_id', None)
+        self.token = account.get('token', None)
+        self.homeserver = homeserver if homeserver.startswith("https://") else "https://" + homeserver
+
 class ImAPIConfig:
     """ImAPI配置"""
     drivers: List[DriverConfig] = []
@@ -121,8 +135,14 @@ class ImAPIConfig:
             elif platform == 'telegram':
                 drivers.append(TelegramConfig(
                     enabled=driver_data.get('enabled', False),
-                    token= driver_data.get('token', ''),
+                    token=driver_data.get('token', ''),
                     http_proxy=driver_data.get('http_proxy', '')
+                ))
+            elif platform == 'matrix':
+                drivers.append(MatrixConfig(
+                    enabled=driver_data.get('enabled', False),
+                    account=driver_data.get('account', None),
+                    homeserver=driver_data.get('homeserver', 'example.com')
                 ))
 
         return cls(drivers=drivers)
@@ -163,6 +183,16 @@ class ImAPIConfig:
                     'token': driver.token,
                     'http_proxy': driver.http_proxy
                 }
+            elif isinstance(driver, MatrixConfig):
+                driver_data = {
+                    'enabled': driver.enabled,
+                    'platform': 'matrix',
+                    'account': {
+                        'user_id': driver.user_id,
+                        'token': driver.token
+                    },
+                    'homeserver': driver.homeserver
+                }
             else:
                 continue
             data['drivers'].append(driver_data)
@@ -175,7 +205,7 @@ class ImAPIConfig:
 # 导出
 __all__ = [
     'ImAPIConfig', 'DriverConfig',
-    'QQConfig', 'KookConfig', 'DiscordConfig',
+    'QQConfig', 'KookConfig', 'DiscordConfig', 'MatrixConfig',
     'WSServerConfig', 'WsClientConfig',
     'ConnectionType'
 ]

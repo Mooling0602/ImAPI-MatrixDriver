@@ -64,10 +64,7 @@ class TelegramConfig(DriverConfig):
         self.http_proxy = http_proxy
 
 class MatrixConfig(DriverConfig):
-    """
-    Matrix驱动配置
-    注意：单机器人账号支持，没有做调用家服务器API的方案，需自行注册账号并手动配置房间等
-    """
+    """Matrix驱动配置"""
     account: dict = {
         'user_id': str,
         'token': str 

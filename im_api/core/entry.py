@@ -31,7 +31,7 @@ class ImAPI:
         self.event_processor = EventProcessor(self.server, self.driver_manager, self.message_bridge)
         
         # 注册驱动
-        self.driver_manager.register_driver(Platform.QQ, QQDriver).register_driver(Platform.MATRIX, MatrixDriver).register_driver(Platform.TELEGRAM, TeleGramDriver)
+        self.driver_manager.register_driver(Platform.QQ, QQDriver).register_driver(Platform.TELEGRAM, TeleGramDriver).register_driver(Platform.MATRIX, MatrixDriver)
 
     def _load_config(self) -> ImAPIConfig:
         """加载配置文件"""

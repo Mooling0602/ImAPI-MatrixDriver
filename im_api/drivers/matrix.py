@@ -49,7 +49,6 @@ class MatrixDriver(BaseDriver):
                 self.logger.debug(response)
 
             def on_sync_error(response: SyncError):
-                global homeserver_online
                 self.logger.error(f"Sync error in matrix: {response.status_code}")
                 if response.status_code >= 500:
                     self.homeserver_online = False

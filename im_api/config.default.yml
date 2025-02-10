@@ -32,4 +32,4 @@ drivers:
     account:
       user_id: ""
       token: ""
-    homeserver: "example.com" # 家服务器需要支持https才能使用
+    homeserver: "example.com"

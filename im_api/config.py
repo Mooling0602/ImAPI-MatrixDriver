@@ -205,7 +205,7 @@ class ImAPIConfig:
 # 导出
 __all__ = [
     'ImAPIConfig', 'DriverConfig',
-    'QQConfig', 'MatrixConfig', 'KookConfig', 'DiscordConfig',
+    'QQConfig', 'KookConfig', 'DiscordConfig', 'MatrixConfig',
     'WSServerConfig', 'WsClientConfig',
     'ConnectionType'
 ]

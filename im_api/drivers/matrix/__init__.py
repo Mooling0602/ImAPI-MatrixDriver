@@ -2,15 +2,14 @@ import asyncio
 import logging
 
 from typing import Optional
-from nio import AsyncClient, SyncError, SyncResponse, UploadFilterError, UploadFilterResponse, RoomMessageText, RoomSendResponse
+from nio import AsyncClient, SyncError, SyncResponse, MatrixRoom, RoomMessageText
 from mcdreforged.api.decorator import new_thread
 
 from im_api.models.request import SendMessageRequest
+from im_api.models.message import Message, Channel, User
 from im_api.models.platform import Platform
 from im_api.drivers import BaseDriver
 from im_api.config import MatrixConfig
-
-from .resp import get_message_callback, get_sync_error, get_sync_response
 
 logging.getLogger('nio').setLevel(logging.WARNING)
 
@@ -29,6 +28,7 @@ class MatrixDriver(BaseDriver):
         self.homeserver = config.homeserver
         self.logger.info(f"Debug: {self.homeserver}")
 
+        self.homeserver_online = True
         self.receiver = None
         
         self.logger.info(f"Initializing config for matrix driver...")
@@ -40,20 +40,51 @@ class MatrixDriver(BaseDriver):
             return
 
         async def receive_messages() -> None:
-            # create client instance.
+            # create client instance for receiver.
             client = AsyncClient(homeserver=self.homeserver)
             client.user_id = self.user_id
             client.access_token = self.token
             client.device_id = 'mcdr'
 
-            client.add_response_callback(get_sync_response(self), SyncResponse)
-            client.add_response_callback(get_sync_error(self), SyncError)
+            async def on_sync_response(response: SyncResponse):
+                self.logger.debug(response)
 
-            import im_api.drivers.matrix.resp as resp
-            if resp.homeserver_online:
-                # self.client.add_event_callback(get_message_callback(self), RoomMessageText)
+            def on_sync_error(response: SyncError):
+                global homeserver_online
+                self.logger.error(f"Sync error in matrix: {response.status_code}")
+                if response.status_code >= 500:
+                    self.homeserver_online = False
+
+            client.add_response_callback(on_sync_response, SyncResponse)
+            client.add_response_callback(on_sync_error, SyncError)
+
+            # text messages support.
+            async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
+                if event.sender != self.user_id:
+                    self.logger.debug(f"Message preview: [{room.display_name}] <{room.user_name(event.sender)}> {event.body}")
+                    message = Message(
+                        id=event.event_id,
+                        content=event.body,
+                        channel=Channel(
+                            id=room.room_id,
+                            type="group",
+                            name=room.display_name
+                        ),
+                        user=User(
+                            id=event.sender,
+                            name=await client.get_displayname(event.sender),
+                            nick=room.user_name(event.sender),
+                            avatar=await client.get_avatar(event.sender)
+                        ),
+                        platform=Platform.MATRIX
+                    )
+
+                    if self.message_callback:
+                        self.message_callback(Platform.MATRIX, message)
+
+            if self.homeserver_online:
                 await client.sync(timeout=30000)
-                client.add_event_callback(get_message_callback(self, client), RoomMessageText)
+                client.add_event_callback(message_callback, RoomMessageText)
                 self.logger.info("Creating receiver task...")
                 self.receiver = asyncio.create_task(client.sync_forever(timeout=30000))
                 try:
@@ -110,7 +141,7 @@ class MatrixDriver(BaseDriver):
             self.logger.error("Cannot send message: driver not connected")
             return None
         async def _send_message():
-            # create client instance.
+            # create client instance for reporter.
             client = AsyncClient(homeserver=self.homeserver)
             client.user_id = self.user_id
             client.access_token = self.token

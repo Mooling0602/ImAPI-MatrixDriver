@@ -15,10 +15,7 @@ from .resp import get_message_callback, get_sync_error, get_sync_response
 logging.getLogger('nio').setLevel(logging.WARNING)
 
 class MatrixDriver(BaseDriver):
-    """
-    Matrix 驱动实现
-    注意：你需要预先获取一个活跃且可用的会话token，且此token需要和你的机器人账号的user_id严格对应，可以尝试使用MatrixSync-MCDR项目
-    """
+    """Matrix 驱动实现"""
 
     @classmethod
     def get_platform(cls) -> Platform:

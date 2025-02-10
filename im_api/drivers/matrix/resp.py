@@ -21,8 +21,7 @@ def get_sync_response(self):
 def get_message_callback(self, client):
     async def message_callback(room: MatrixRoom, event: RoomMessageText) -> None:
         if event.sender != self.user_id:
-            # 防止刷屏，用debug
-            self.logger.debug(f"消息预览：[{room.display_name}] <{room.user_name(event.sender)}> {event.body}")
+            self.logger.debug(f"Message preview: [{room.display_name}] <{room.user_name(event.sender)}> {event.body}")
             message = Message(
                 id=event.event_id,
                 content=event.body,

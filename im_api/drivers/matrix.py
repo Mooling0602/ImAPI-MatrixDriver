@@ -124,8 +124,6 @@ class MatrixDriver(BaseDriver):
             self.logger.info("Disconnecting matrix driver...")
             self.receiver.cancel()
             self.connected = False
-        else:
-            self.logger.debug(self.receiver) # For debugging
         
     def send_message(self, request: SendMessageRequest) -> Optional[str]:
         """发送消息

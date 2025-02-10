@@ -26,7 +26,6 @@ class MatrixDriver(BaseDriver):
         self.user_id = config.user_id
         self.token = config.token
         self.homeserver = config.homeserver
-        self.logger.info(f"Debug: {self.homeserver}")
 
         self.homeserver_online = True
         self.receiver = None

@@ -1,66 +1,35 @@
 ![ImAPI](https://socialify.git.ci/MCDReforged-Towhee-Community/ImAPI/image?description=1&font=Inter&forks=1&issues=1&language=1&name=1&owner=1&pattern=Plus&pulls=1&stargazers=1&theme=Auto)
 
-## 概要说明
-以ImAPI作为核心插件的架构，主要有如下几个角色
+# ImAPI
 
-1. **外部系统**: 与MCDR互通且ImAPI支持的其他im平台，例如QQ，Kook，Discord，Telegram等
-2. **ImAPI**: 事件处理的核心插件，负责将所有来自各个平台的消息与事件做统一处理，并封装成统一格式的事件(Event)进行广播
-3. **Reactor**: 可扩展的、与平台协议解耦的应用层，基于ImAPI的事件进行响应与处理。在MCDR的插件关系上，Reactor插件依赖ImAPI
+[English](docs/en_us/README.md) | [简体中文](docs/zh_cn/README.md)
 
-## 插件事件
+ImAPI is a unified messaging platform integration plugin for MCDReforged, supporting multiple instant messaging platforms like QQ, Telegram, Discord, Kook, and Matrix.
 
-`ImAPI`针对各外部系统的消息与事件进行了统一封装，封装后的事件类型为`Message`和`Event`。在`ImAPI`处理完消息与事件后，会将其封装成`Message`或`Event`并通过[MCDR自定义事件](https://docs.mcdreforged.com/zh-cn/latest/plugin_dev/event.html#default-event-listener)进行广播。下游的`Reactor`插件应当订阅相应的事件实现自己的功能和逻辑。
+## Features
 
-下游如果想和平台交互，可以通过发送`ImAPI`订阅的事件到`MCDR`以通过`ImAPI`向平台发送消息或者进行操作。
+- 🔌 **Multi-Platform Support**: Seamlessly integrate with QQ, Telegram, Discord, Kook, and Matrix
+- 🔄 **Unified Event System**: Handle messages and events from different platforms in a standardized way
+- 🛠 **Extensible Architecture**: Easy to develop downstream plugins (Reactors) with platform-agnostic APIs
+- 🔗 **Message Bridge**: Enable cross-platform message forwarding
+- 🚀 **Parallel Processing**: Efficient handling of multiple platform drivers
 
-### 能力支持
+## Platform Support Status
 
-|事件\平台|QQ|Telegram|Discord|Kook|Matrix|
+|Feature\Platform|QQ|Telegram|Discord|Kook|Matrix|
 |:-:|:-:|:-:|:-:|:-:|:-:|
-|接收私聊消息|✅|✅|🚧|🚧|🚧|
-|发送私聊消息|✅|✅|🚧|🚧|🚧|
-|接收群聊消息|✅|✅|🚧|🚧|✅|
-|发送群聊消息|✅|✅|🚧|🚧|✅|
-|加入群聊通知|✅|✅|🚧|🚧|🚧|
-|退出群聊通知|✅|✅|🚧|🚧|🚧|
+|Private Message (Receive)|✅|✅|🚧|🚧|🚧|
+|Private Message (Send)|✅|✅|🚧|🚧|🚧|
+|Group Message (Receive)|✅|✅|🚧|🚧|✅|
+|Group Message (Send)|✅|✅|🚧|🚧|✅|
+|Join Group Notification|✅|✅|🚧|🚧|🚧|
+|Leave Group Notification|✅|✅|🚧|🚧|🚧|
 
-### 平台消息(im_api.message)
-```python
-from mcdreforged.api.all import *
-from im_api.drivers.base import Platform
-from im_api.models.message import Event, Message
+## Documentation
 
-server.register_event_listener("im_api.message", on_message)
-
-def on_message(message: Message):
-    server.logger.info(f"Received message: {message.content}")
-```
-### 平台事件(im_api.event)
-```python
-from mcdreforged.api.all import *
-from im_api.drivers.base import Platform
-from im_api.models.message import Event, Message
-
-server.register_event_listener("im_api.event", on_event)
-
-def on_event(message: Message):
-    server.logger.info(f"Received event: {message.event}")
-```
-### 向平台发送消息(im_api.send_message)
-```python
-from im_api.models.request import MessageType, SendMessageRequest, ChannelInfo
-from mcdreforged.api.all import *
-
-def send_msg_to_qq():
-    request = SendMessageRequest(
-        platforms=[Platform.QQ],
-        channel=ChannelInfo(id='114514', type=MessageType.PRIVATE),
-        content='Hello, MCDR!'
-    )
-    server.dispatch_event(LiteralEvent("im_api.send_message"), (request,))
-```
-
-
+- [Configuration Guide](docs/zh-cn/configuration.md)
+- [Plugin Development Guide](docs/zh-cn/plugin-dev.md)
+- [Architecture Overview](docs/zh-cn/platform.md)
 
 ## License
 
@@ -71,5 +40,3 @@ This program is free software: you can redistribute it and/or modify it under th
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-本程序是自由软件：你可以再分发之和/或依照由自由软件基金会发布的 GNU 通用公共许可证修改之，无论是版本 3 许可证，还是（按你的决定）任何以后版都可以。

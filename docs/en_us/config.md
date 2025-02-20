@@ -4,36 +4,43 @@ This document will guide you on how to configure ImAPI, including the structure 
 
 ## Configuration File Structure
 
-ImAPI uses YAML format configuration files. The default configuration file is located at `im_api/config.default.yml`, and you need to copy it to the MCDR configuration directory and rename it to `config/im_api/config.yml`.
+ImAPI uses YAML format configuration files. MCDR will initialize this configuration file to `config/im_api/config.yml` when loading im_api for the first time. You need to modify the configuration file after the first load for it to work properly.
 
 Here's the basic structure of the configuration file:
 
 ```yaml
 drivers:
-  qq:  # QQ platform configuration
-    enabled: true  # Whether to enable
-    account:  # Account configuration
-      uin: 123456789  # QQ number
-      password: "your_password"  # Password, recommended to wrap with quotes
-    protocol: 2  # Login protocol, 1: Android Phone, 2: Android Watch, 3: Android Pad
-    reconnect_interval: 10  # Reconnection interval (seconds)
+  # QQ driver configuration
+  - enabled: true
+    platform: qq
+    # Connection type: ws_server(Onebot Reverse WS) or ws_client(Onebot Forward WS)
+    connection_type: ws_server
+    # Reverse WebSocket configuration (used when connection_type is ws_server)
+    ws_server:
+      host: 0.0.0.0
+      port: 8080
+      access_token: ""   # Access token, leave empty for no validation
+      url_prefix: /ws/   # WebSocket URL prefix
+    
+    # Forward WebSocket configuration (used when connection_type is ws_client)
+    ws_client:
+      ws_url: ws://127.0.0.1:6700
+      access_token: ""   # Access token, leave empty for no validation
+      heartbeat: 30  # Heartbeat interval (seconds)
+  
+  # Telegram driver configuration
+  - enabled: false
+    platform: telegram
+    token: ""
+    http_proxy: ""
 
-  telegram:  # Telegram platform configuration
-    enabled: true  # Whether to enable
-    token: "your_bot_token"  # Bot Token
-    proxy:  # Proxy configuration (optional)
-      enabled: false
-      type: socks5  # Supports socks5/http
-      host: 127.0.0.1
-      port: 1080
-      username: ""  # Optional
-      password: ""  # Optional
-
-  matrix:  # Matrix platform configuration
-    enabled: false  # Whether to enable
-    homeserver: "https://matrix.org"  # Matrix server address
-    user_id: "@your_user:matrix.org"  # User ID
-    access_token: "your_access_token"  # Access token
+  # Matrix driver configuration
+  - enabled: false
+    platform: matrix
+    account:
+      user_id: ""
+      token: ""
+    homeserver: "example.com"
 ```
 
 ## Configuration Items
@@ -41,33 +48,35 @@ drivers:
 ### QQ Platform Configuration
 
 - `enabled`: Whether to enable QQ platform
-- `account`:
-  - `uin`: QQ account number
-  - `password`: QQ password
-- `protocol`: Login protocol type
-  - `1`: Android Phone
-  - `2`: Android Watch
-  - `3`: Android Pad
-- `reconnect_interval`: Disconnection reconnection interval in seconds
+- `platform`: Platform identifier, fixed as "qq"
+- `connection_type`: Connection type (Note: This is the behavior of `im_api`, please match with Onebot's connection method)
+  - `ws_server`: `im_api` starts ws_server, suitable for Onebot's `Reverse WS` or `WebSocket Client` mode
+  - `ws_client`: `im_api` starts ws_client, suitable for Onebot's `Forward WS` or `WebSocket Server` mode
+- `ws_server`: (Used when connection_type is ws_server)
+  - `host`: Listening address
+  - `port`: Listening port
+  - `access_token`: Access token, leave empty for no validation
+  - `url_prefix`: WebSocket URL prefix
+- `ws_client`: (Used when connection_type is ws_client)
+  - `ws_url`: WebSocket server address
+  - `access_token`: Access token, leave empty for no validation
+  - `heartbeat`: Heartbeat interval in seconds
 
 ### Telegram Platform Configuration
 
 - `enabled`: Whether to enable Telegram platform
-- `token`: Telegram Bot Token, obtained from @BotFather
-- `proxy`: Proxy configuration (optional)
-  - `enabled`: Whether to enable proxy
-  - `type`: Proxy type, supports socks5 and http
-  - `host`: Proxy server address
-  - `port`: Proxy server port
-  - `username`: Proxy authentication username (optional)
-  - `password`: Proxy authentication password (optional)
+- `platform`: Platform identifier, fixed as "telegram"
+- `token`: Telegram Bot Token
+- `http_proxy`: HTTP proxy address (optional)
 
 ### Matrix Platform Configuration
 
 - `enabled`: Whether to enable Matrix platform
+- `platform`: Platform identifier, fixed as "matrix"
+- `account`: Account configuration
+  - `user_id`: Matrix user ID
+  - `token`: Access token
 - `homeserver`: Matrix server address
-- `user_id`: Matrix user ID
-- `access_token`: Matrix access token
 
 ## Configuration Examples
 
@@ -75,45 +84,48 @@ drivers:
 
 ```yaml
 drivers:
-  qq:
-    enabled: true
-    account:
-      uin: 123456789
-      password: "your_password"
-    protocol: 1
-    reconnect_interval: 10
-  telegram:
-    enabled: false
-  matrix:
-    enabled: false
+  # QQ driver configuration, Onebot connection method is Reverse WS or WebSocket Client mode
+  - enabled: true
+    platform: qq
+    connection_type: ws_server
+    ws_server:
+      host: 0.0.0.0
+      port: 8080
+      access_token: ""
+      url_prefix: /ws/
 ```
 
 ### Complete Configuration (All Platforms Enabled)
 
 ```yaml
 drivers:
-  qq:
-    enabled: true
-    account:
-      uin: 123456789
-      password: "your_secure_password"
-    protocol: 2
-    reconnect_interval: 10
+  # QQ driver configuration
+  - enabled: true
+    platform: qq
+    connection_type: ws_server
+    ws_server:
+      host: 0.0.0.0
+      port: 8080
+      access_token: "your_access_token"
+      url_prefix: /ws/
+    ws_client:
+      ws_url: ws://127.0.0.1:6700
+      access_token: "your_access_token"
+      heartbeat: 30
 
-  telegram:
-    enabled: true
+  # Telegram driver configuration
+  - enabled: true
+    platform: telegram
     token: "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-    proxy:
-      enabled: true
-      type: socks5
-      host: 127.0.0.1
-      port: 1080
+    http_proxy: "http://127.0.0.1:1080"
 
-  matrix:
-    enabled: true
-    homeserver: "https://matrix.org"
-    user_id: "@mcdr_bot:matrix.org"
-    access_token: "your_matrix_access_token"
+  # Matrix driver configuration
+  - enabled: true
+    platform: matrix
+    account:
+      user_id: "@mcdr_bot:matrix.org"
+      token: "your_matrix_access_token"
+    homeserver: "matrix.org"
 ```
 
 ## Best Practices

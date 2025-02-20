@@ -4,7 +4,7 @@
 
 ## 配置文件结构
 
-ImAPI 使用 YAML 格式的配置文件。默认配置文件位于 `im_api/config.default.yml`，您需要将其复制到 MCDR 的配置目录下并重命名为 `config/im_api/config.yml`。
+ImAPI 使用 YAML 格式的配置文件。MCDR 会在首次加载im_api时初始化该配置文件到`config/im_api/config.yml`，您需要在首次加载后对配置文件进行修改才能正常工作。
 
 以下是配置文件的基本结构：
 
@@ -49,15 +49,15 @@ drivers:
 
 - `enabled`: 是否启用 QQ 平台
 - `platform`: 平台标识符，固定为 "qq"
-- `connection_type`: 连接类型
-  - `ws_server`: Onebot 反向 WebSocket
-  - `ws_client`: Onebot 正向 WebSocket
-- `ws_server`: 反向 WebSocket 配置（当 connection_type 为 ws_server 时使用）
+- `connection_type`: 连接类型(注：此处是`im_api`的行为，请和`Onebot`的连接方式进行匹配)
+  - `ws_server`: `im_api`启动ws_server，适用于Onebot的`反向ws`或者`Websocket客户端`模式
+  - `ws_client`: `im_api`启动ws_client，适用于Onebot的`正向ws`或者`Websocket服务器`模式
+- `ws_server`: （当 connection_type 为 ws_server 时使用）
   - `host`: 监听地址
   - `port`: 监听端口
   - `access_token`: 访问令牌，留空则不验证
   - `url_prefix`: WebSocket URL前缀
-- `ws_client`: 正向 WebSocket 配置（当 connection_type 为 ws_client 时使用）
+- `ws_client`:（当 connection_type 为 ws_client 时使用）
   - `ws_url`: WebSocket 服务器地址
   - `access_token`: 访问令牌，留空则不验证
   - `heartbeat`: 心跳间隔，单位为秒
@@ -84,7 +84,7 @@ drivers:
 
 ```yaml
 drivers:
-  # QQ 驱动配置
+  # QQ 驱动配置，Onebot的连接方式为反向ws或者Websocket客户端模式
   - enabled: true
     platform: qq
     connection_type: ws_server
@@ -93,11 +93,6 @@ drivers:
       port: 8080
       access_token: ""
       url_prefix: /ws/
-  # 禁用其他平台
-  - enabled: false
-    platform: telegram
-  - enabled: false
-    platform: matrix
 ```
 
 ### 完整配置（启用所有平台）

@@ -27,9 +27,9 @@ ImAPI is a unified messaging platform integration plugin for MCDReforged, suppor
 
 ## Documentation
 
-- [Configuration Guide](docs/zh-cn/config.md)
-- [Plugin Development Guide](docs/zh-cn/plugin-dev.md)
-- [Architecture Overview](docs/zh-cn/platform.md)
+- [Configuration Guide](docs/en_us/config.md)
+- [Plugin Development Guide](docs/en_us/plugin-dev.md)
+- [Architecture Overview](docs/en_us/platform.md)
 
 ## License
 

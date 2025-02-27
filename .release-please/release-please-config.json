@@ -9,7 +9,7 @@
     ],
     "separate-pull-requests": true,
     "packages": {
-      "im_api": {
+      ".": {
         "package-name": "im_api"
       }
     }
